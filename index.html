@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Larry and The Horrible Worms — Interactive E-Book</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #090d16;
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 14px 20px;
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .title-wrap h1 { font-size: 16px; font-weight: 800; }
+    .title-wrap p { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      transition: transform 0.1s ease, opacity 0.15s ease;
+    }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-voice { background: #4f46e5; color: #fff; }
+    .btn-voice.speaking { background: #fbbf24; color: #090d16; }
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      width: 100%;
+      max-width: 980px;
+      min-height: 500px;
+      border-radius: 26px;
+      overflow: hidden;
+      border: 4px solid #1e293b;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.55);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .cover {
+      flex: 1;
+      min-height: 500px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 40px 28px;
+      text-align: center;
+    }
+    .cover img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .cover-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(2,6,23,0.75), rgba(2,6,23,0.2), rgba(2,6,23,0.85));
+    }
+    .cover-top, .cover-bottom { position: relative; z-index: 2; }
+    .cover-title { font-size: clamp(28px, 5vw, 48px); font-weight: 800; color: #fff; text-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+    .cover-sub { color: #fcd34d; font-weight: 700; font-size: 17px; margin-top: 10px; }
+    .author-pill {
+      display: inline-block;
+      background: rgba(2,6,23,0.75);
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .spread-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+      min-height: 500px;
+    }
+    @media (max-width: 720px) {
+      .spread-split { grid-template-columns: 1fr; }
+    }
+    .art-box { background: #0f172a; min-height: 280px; display: flex; align-items: center; justify-content: center; }
+    .art-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .text-box {
+      padding: 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .story-text { font-size: clamp(18px, 2.2vw, 22px); line-height: 1.65; margin: auto 0; }
+    .page-num { text-align: right; font-size: 12px; font-weight: 800; opacity: 0.65; }
+    .end-slide {
+      flex: 1;
+      min-height: 500px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+      background: linear-gradient(135deg, #1e1b4b, #0f172a);
+      color: #fff;
+      gap: 14px;
+    }
+    footer {
+      padding: 14px 20px;
+      background: #0f172a;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .btn-prev { background: #1e293b; color: #f8fafc; }
+    .btn-next { background: #fbbf24; color: #090d16; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-wrap">
+      <h1>Larry and The Horrible Worms</h1>
+      <p id="slide-label">Front Cover • By Devon McNamara</p>
+    </div>
+    <button id="voice-btn" class="btn-voice">🔊 Read Aloud</button>
+  </header>
+  <main>
+    <div id="book-card" class="card"></div>
+  </main>
+  <footer>
+    <button id="prev-btn" class="btn-prev">← Previous Page</button>
+    <span id="counter" style="font-size:13px;font-weight:700;color:#94a3b8;">1 / 1</span>
+    <button id="next-btn" class="btn-next">Turn Page →</button>
+  </footer>
+  <script>
+    const BOOK = {"title":"Larry and The Horrible Worms","author":"Devon McNamara","subtitle":"An Illustrated Adventure","coverImage":"images/cover.jpg","coverDesign":{"id":"starlight-navy","name":"Starlight Midnight","bg":"#0F172A","text":"#F8FAFC","accent":"#38BDF8","border":"border-sky-500/50","pattern":"radial-gradient(rgba(56,189,248,0.22) 1.5px, transparent 1.5px)"},"layoutId":"split-left","fontFamily":"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace","pages":[{"text":"Once, there was a cat named Larry. Larry was minding his own business eating cat food, when he heard a blazing crackle behind him. Then there was a flash of purple, followed by complete darkness. Larry tried to squirm, but couldn't move a muscle.","image":"images/page-01.jpg","design":{"id":"warm-parchment","name":"Warm Parchment","bg":"#FDF8EE","text":"#1E293B","accent":"#D97706","border":"border-amber-300","pattern":"radial-gradient(#FDE68A 1px, transparent 1px)"}},{"text":"He realized that he'd been kidnapped and was likely going somewhere wretched. As his ability of sight came back to him, he found himself behind bars. Larry was in a prison cell.","image":"images/page-02.jpg","design":{"id":"starlight-navy","name":"Starlight Midnight","bg":"#0F172A","text":"#F8FAFC","accent":"#38BDF8","border":"border-sky-500/50","pattern":"radial-gradient(rgba(56,189,248,0.22) 1.5px, transparent 1.5px)"}},{"text":"There was a crack of light in the corner of his cell, and when he glanced into it he could see the sky and what looked like the wing of an airplane. It must've been a pretty weird wing, though, because it looked like a bent, purple tortilla chip.","image":"images/page-03.jpg","design":{"id":"forest-moss","name":"Enchanted Sage","bg":"#ECFDF5","text":"#064E3B","accent":"#059669","border":"border-emerald-300","pattern":"radial-gradient(#A7F3D0 1.2px, transparent 1.2px)"}},{"text":"Outside of his cell, Larry watched as mutated, giant purple worms squirmed across the hall. Many of them also had arms, a suit of armor, and even crackling, electric purple blades.","image":"images/page-04.jpg","design":{"id":"sunset-coral","name":"Sunset Sherbet","bg":"#FFF1F2","text":"#4C0519","accent":"#E11D48","border":"border-rose-300","pattern":"radial-gradient(#FECDD3 1.2px, transparent 1.2px)"}},{"text":"Larry screamed for help, which caught the attention of one particularly angry-looking worm. It barreled through the bars of Larry's prison cell, and allowed quick-thinking Larry to hop over the grotesque worm and out of the cell.","image":"images/page-05.jpg","design":{"id":"blueprint-grid","name":"Inventor Blueprint","bg":"#EFF6FF","text":"#1E3A8A","accent":"#2563EB","border":"border-blue-300","pattern":"linear-gradient(to right, rgba(37,99,235,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(37,99,235,0.08) 1px, transparent 1px)"}},{"text":"Just as Larry was contemplating what to do next, a sound like a doorbell ringing came from what genuinely looked like a front door. Larry ducked into a crevice in the wall as another worm crawled to answer the door. There, in the doorway, was a pizza delivery guy on his bike.","image":"images/page-06.jpg","design":{"id":"volcanic-ember","name":"Dragon Ember","bg":"#1C1917","text":"#FEF3C7","accent":"#F97316","border":"border-orange-500/50","pattern":"radial-gradient(rgba(249,115,22,0.2) 1.5px, transparent 1.5px)"}},{"text":"Seemingly without reason, the guy launched a flaming-hot pizza at the worm. The pizza ricocheted into all the worm's faces that rushed to help.","image":"images/page-07.jpg","design":{"id":"warm-parchment","name":"Warm Parchment","bg":"#FDF8EE","text":"#1E293B","accent":"#D97706","border":"border-amber-300","pattern":"radial-gradient(#FDE68A 1px, transparent 1px)"}},{"text":"\"Come on!\" the pizza delivery guy said pointing to the doorway. So, upon the guy's request, Larry belted out the door and into the sky with him, just before the worm ship exploded due to overdose of flaming-hot pizza.","image":"images/page-08.jpg","design":{"id":"starlight-navy","name":"Starlight Midnight","bg":"#0F172A","text":"#F8FAFC","accent":"#38BDF8","border":"border-sky-500/50","pattern":"radial-gradient(rgba(56,189,248,0.22) 1.5px, transparent 1.5px)"}}]};
+    let idx = 0;
+    let speaking = false;
+    const total = BOOK.pages.length + 2;
+    const card = document.getElementById('book-card');
+    const label = document.getElementById('slide-label');
+    const counter = document.getElementById('counter');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const voiceBtn = document.getElementById('voice-btn');
+
+    function stopSpeech() {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      speaking = false;
+      voiceBtn.textContent = '🔊 Read Aloud';
+      voiceBtn.classList.remove('speaking');
+    }
+
+    function getCurrentText() {
+      if (idx === 0) return BOOK.title + ', by ' + BOOK.author + '. ' + (BOOK.subtitle || '');
+      if (idx === total - 1) return 'The End. Written and illustrated by ' + BOOK.author + '.';
+      return BOOK.pages[idx - 1].text || '';
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function render() {
+      stopSpeech();
+      counter.textContent = (idx + 1) + ' / ' + total;
+      prevBtn.disabled = idx === 0;
+      nextBtn.disabled = idx >= total - 1;
+
+      if (idx === 0) {
+        label.textContent = 'Front Cover • By ' + BOOK.author;
+        card.style.backgroundColor = BOOK.coverDesign.bg || '#0f172a';
+        card.style.color = '#ffffff';
+        card.innerHTML =
+          '<div class="cover">' +
+            (BOOK.coverImage ? '<img src="' + BOOK.coverImage + '" alt="Cover" />' : '') +
+            '<div class="cover-overlay"></div>' +
+            '<div class="cover-top"><h2 class="cover-title">' + escapeHtml(BOOK.title) + '</h2>' +
+            (BOOK.subtitle ? '<p class="cover-sub">' + escapeHtml(BOOK.subtitle) + '</p>' : '') +
+            '</div>' +
+            '<div class="cover-bottom"><span class="author-pill">Written &amp; Illustrated by ' + escapeHtml(BOOK.author) + '</span></div>' +
+          '</div>';
+        return;
+      }
+
+      if (idx === total - 1) {
+        label.textContent = 'Back Cover';
+        card.innerHTML =
+          '<div class="end-slide">' +
+            '<div style="font-size:40px;">✨</div>' +
+            '<h2 style="font-size:36px;font-weight:800;">The End</h2>' +
+            '<p style="color:#cbd5e1;font-size:15px;">Created in StoryForge Studio by <strong>' + escapeHtml(BOOK.author) + '</strong></p>' +
+            '<button onclick="idx=0;render();" style="margin-top:12px;background:#fbbf24;color:#090d16;">Read Again</button>' +
+          '</div>';
+        return;
+      }
+
+      const pg = BOOK.pages[idx - 1];
+      label.textContent = 'Page ' + idx + ' of ' + BOOK.pages.length;
+      card.style.backgroundColor = (pg.design && pg.design.bg) || '#FDF8EE';
+      card.style.color = (pg.design && pg.design.text) || '#1E293B';
+      card.innerHTML =
+        '<div class="spread-split">' +
+          '<div class="art-box">' +
+            (pg.image ? '<img src="' + pg.image + '" alt="Page ' + idx + '" />' : '<span style="color:#64748b;font-size:13px;">Illustration</span>') +
+          '</div>' +
+          '<div class="text-box">' +
+            '<p class="story-text">' + escapeHtml(pg.text) + '</p>' +
+            '<div class="page-num">Page ' + idx + ' of ' + BOOK.pages.length + '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    prevBtn.onclick = () => { if (idx > 0) { idx--; render(); } };
+    nextBtn.onclick = () => { if (idx < total - 1) { idx++; render(); } };
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' && idx > 0) { idx--; render(); }
+      if (e.key === 'ArrowRight' && idx < total - 1) { idx++; render(); }
+    });
+    voiceBtn.onclick = () => {
+      if (!window.speechSynthesis) return;
+      if (speaking) { stopSpeech(); return; }
+      const u = new SpeechSynthesisUtterance(getCurrentText());
+      u.rate = 0.96;
+      u.onend = stopSpeech;
+      u.onerror = stopSpeech;
+      speaking = true;
+      voiceBtn.textContent = '⏹ Stop Voice';
+      voiceBtn.classList.add('speaking');
+      window.speechSynthesis.speak(u);
+    };
+
+    render();
+  </script>
+</body>
+</html>
